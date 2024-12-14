@@ -1,0 +1,80 @@
+import os
+from radon.complexity import cc_visit
+from radon.metrics import mi_visit
+
+class CKMetricsAnalyzer:
+    def __init__(self, project_paths):
+        self.project_paths = project_paths
+
+    @staticmethod
+    def calculate_wmc(file_path):
+        """Calculate Weighted Methods per Class (WMC)"""
+        with open(file_path, 'r') as file:
+            code = file.read()
+            complexities = cc_visit(code)
+            return sum(c.complexity for c in complexities)
+
+    @staticmethod
+    def analyze_code(file_path):
+        """Calculate Cyclomatic Complexity and Maintainability Index"""
+        with open(file_path, 'r') as file:
+            code = file.read()
+            # Cyclomatic Complexity
+            complexity_results = cc_visit(code)
+            complexity_score = sum(c.complexity for c in complexity_results)
+
+            # Maintainability Index
+            mi_score = mi_visit(code, True)
+
+        return complexity_score, mi_score
+
+    @staticmethod
+    def calculate_cbo(file_path):
+        """Calculate Coupling Between Objects (CBO)"""
+        with open(file_path, 'r') as file:
+            code = file.read()
+            references = code.count('import') + code.count('.')
+            return references
+
+    def analyze_project(self, directory_path):
+        """Analyze files in a given project directory"""
+        results = []
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                if file.endswith('.cs') or file.endswith('.js'):
+                    file_path = os.path.join(root, file)
+                    complexity, mi = self.analyze_code(file_path)
+                    cbo = self.calculate_cbo(file_path)
+                    results.append({
+                        'File': file,
+                        'Cyclomatic Complexity': complexity,
+                        'Maintainability Index': mi,
+                        'Coupling Between Objects': cbo
+                    })
+        return results
+
+    def run_analysis(self):
+        """Run analysis on all configured projects"""
+        for project_name, project_path in self.project_paths.items():
+            print(f"Analyzing project: {project_name}")
+            analysis_results = self.analyze_project(project_path)
+            for result in analysis_results:
+                print(f"File: {result['File']}")
+                print(f"Cyclomatic Complexity: {result['Cyclomatic Complexity']}")
+                print(f"Maintainability Index: {result['Maintainability Index']}")
+                print(f"Coupling Between Objects: {result['Coupling Between Objects']}")
+                print("-" * 40)
+            print("\n")
+
+# Define projects for analysis
+projects = {
+    "DotVVM": "./DotVVM_Project",
+    "eShopOnWeb (MVC)": "./eShopOnWeb",
+    "MVVM-Samples": "./MVVM_Samples",
+    "Knockout": "./Knockout_Project",
+}
+
+# Run the CK Metrics Analyzer
+if __name__ == "__main__":
+    analyzer = CKMetricsAnalyzer(projects)
+    analyzer.run_analysis()
